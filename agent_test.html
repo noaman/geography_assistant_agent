@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grade 10 Teaching Assistant – Demo & How It Works</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(160deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+      color: #1e293b;
+      min-height: 100vh;
+    }
+
+    /* Header & Tabs */
+    .app-header {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .app-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #334155;
+    }
+    .app-title i { color: #7C3AED; }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: #f1f5f9;
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: #64748b;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { color: #334155; background: #e2e8f0; }
+    .tab-btn.active {
+      background: #7C3AED;
+      color: #fff;
+    }
+    .tab-panel { display: none; padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .tab-panel.active { display: block; }
+
+    /* Demo tab: layout */
+    .demo-layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 24px;
+      height: calc(100vh - 120px);
+      min-height: 500px;
+    }
+    @media (max-width: 900px) {
+      .demo-layout { grid-template-columns: 1fr; height: auto; }
+    }
+    .sample-questions-panel {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .chapters-in-rag {
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .chapters-in-rag h3 {
+      margin: 0 0 10px;
+      font-size: 0.9rem;
+      color: #7C3AED;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chapters-in-rag p {
+      margin: 0 0 8px;
+      font-size: 0.8rem;
+      color: #64748b;
+      line-height: 1.4;
+    }
+    .chapters-in-rag ul {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 0.8rem;
+      color: #475569;
+      line-height: 1.5;
+    }
+    .chapters-in-rag .part-label { font-weight: 600; color: #334155; margin-top: 8px; }
+    .sample-questions-panel h3 {
+      margin: 0 0 12px;
+      font-size: 1rem;
+      color: #7C3AED;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sample-q {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      color: #475569;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .sample-q:hover {
+      background: #ede9fe;
+      border-color: #7C3AED;
+      color: #5b21b6;
+    }
+    .chat-container {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 480px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .chat-container .chat-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid #e2e8f0;
+      font-weight: 600;
+      color: #7C3AED;
+      background: #faf5ff;
+    }
+    .chat-container .chat-messages-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      background: #fafafa;
+    }
+    .chat-container .chat-welcome {
+      color: #64748b;
+      font-size: 0.9rem;
+      padding: 12px 0;
+    }
+    .chat-container .chat-msg { margin-bottom: 14px; }
+    .chat-container .chat-msg-user .chat-bubble {
+      background: linear-gradient(135deg, #7C3AED, #6D28D9);
+      color: #fff;
+      margin-left: auto;
+      max-width: 85%;
+      border-radius: 16px 16px 4px 16px;
+    }
+    .chat-container .chat-msg-assistant .chat-bubble {
+      background: #fff;
+      color: #1e293b;
+      max-width: 95%;
+      border-radius: 16px 16px 16px 4px;
+      border: 1px solid #e2e8f0;
+    }
+    .chat-container .chat-bubble {
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+    .chat-container .chat-input-wrap {
+      padding: 12px 16px;
+      border-top: 1px solid #e2e8f0;
+      background: #fff;
+    }
+    .chat-container .chat-inner {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .chat-container .chat-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      resize: none;
+      min-height: 48px;
+      max-height: 120px;
+      background: #fff;
+      color: #1e293b;
+    }
+    .chat-container .chat-input::placeholder { color: #94a3b8; }
+    .chat-container .chat-send {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #7C3AED;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .chat-container .chat-send:hover { background: #6D28D9; }
+    .chat-container .chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+    .chat-typing-dots span {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #7C3AED;
+      margin: 0 2px;
+      animation: blink 1.4s infinite both;
+    }
+    .chat-typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .chat-typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,80%,100% { opacity: 0.4; } 40% { opacity: 1; } }
+    .chat-accordion { margin: 8px 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; }
+    .chat-accordion-trigger {
+      width: 100%; padding: 8px 12px; text-align: left; background: #f8fafc;
+      border: none; cursor: pointer; font-size: 0.85rem; color: #5b21b6;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .chat-accordion-trigger:hover { background: #f1f5f9; }
+    .chat-accordion-panel pre { margin: 0; padding: 12px; font-size: 0.75rem; background: #f8fafc; white-space: pre-wrap; word-break: break-word; color: #334155; border-top: 1px solid #e2e8f0; }
+    .chat-output-markdown { font-size: 0.9rem; line-height: 1.6; color: #334155; }
+    .chat-output-markdown p { margin: 0 0 0.5em; }
+    .chat-output-markdown pre { background: #f1f5f9; padding: 8px; border-radius: 6px; font-size: 0.8rem; color: #334155; }
+    .chat-response-image-wrap { margin: 8px 0; }
+    .chat-response-image-wrap img { max-width: 100%; height: auto; border-radius: 8px; }
+
+    /* How it works tab */
+    .steps-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .steps-nav {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .step-dot {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid #c4b5fd;
+      background: #fff;
+      color: #64748b;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .step-dot:hover { border-color: #7C3AED; color: #7C3AED; }
+    .step-dot.active { background: #7C3AED; border-color: #7C3AED; color: #fff; }
+    .step-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .step-card h3 {
+      margin: 0;
+      padding: 16px 20px;
+      background: #faf5ff;
+      color: #7C3AED;
+      font-size: 1.1rem;
+    }
+    .step-card .step-image-wrap {
+      padding: 16px;
+      background: #f8fafc;
+      text-align: center;
+      min-height: 200px;
+    }
+    .step-card .step-image-wrap img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .step-card .step-image-wrap .img-fallback {
+      color: #64748b;
+      padding: 48px 24px;
+      font-size: 0.9rem;
+    }
+    .step-card .step-desc {
+      padding: 20px;
+      color: #475569;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    .step-card .step-desc strong { color: #7C3AED; }
+    .prev-next {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+      gap: 12px;
+    }
+    .prev-next button {
+      padding: 12px 24px;
+      border-radius: 10px;
+      border: 1px solid #7C3AED;
+      background: #faf5ff;
+      color: #7C3AED;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .prev-next button:hover { background: #ede9fe; color: #5b21b6; }
+    .prev-next button:disabled { opacity: 0.4; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="app-title">
+      <i class="fas fa-chalkboard-teacher"></i>
+      Grade 10 Geography Teaching Assistant
+    </div>
+    <nav class="tabs">
+      <button type="button" class="tab-btn active" data-tab="demo">Demo</button>
+      <button type="button" class="tab-btn" data-tab="how-it-works">How It Works</button>
+    </nav>
+  </header>
+
+  <!-- Tab: Demo -->
+  <section id="tab-demo" class="tab-panel active">
+    <div class="demo-layout">
+      <div class="sample-questions-panel">
+        <div class="chapters-in-rag">
+          <h3><i class="fas fa-book"></i> Chapters in the RAG</h3>
+          <p>Frame your questions around these Grade 10 Geography topics:</p>
+          <div class="part-label">Part I – Map Work</div>
+          <ul>
+            <li>Interpretation of Topographical Maps</li>
+            <li>Location, Extent and Physical Features</li>
+            <li>Self Assessment Papers 1–2</li>
+          </ul>
+          <div class="part-label">Part II – Geography of India</div>
+          <ul>
+            <li>Climate</li>
+            <li>Soil Resources</li>
+            <li>Natural Vegetation</li>
+            <li>Water Resources</li>
+            <li>Mineral and Energy Resources</li>
+            <li>Agriculture</li>
+            <li>Manufacturing Industries</li>
+            <li>Transport</li>
+            <li>Waste Management</li>
+            <li>Self Assessment Papers 3–11, Practice Papers</li>
+          </ul>
+        </div>
+        <h3><i class="fas fa-lightbulb"></i> Sample questions</h3>
+        <p style="color:#64748b;font-size:0.85rem;margin:0 0 12px;">Click to try with the agent:</p>
+        <button type="button" class="sample-q" data-query="I will be covering Soil Resources today in my class. Build me an exhaustive study note where I can easily catch up on core concepts, do some class activities, and give aligned homework. Ensure it's comprehensive to help me cover the topic fully.">
+          Soil Resources – study note, activities & homework
+        </button>
+        <button type="button" class="sample-q" data-query="Build me a detailed study note to teach the Climate chapter in class. I want detailed notes on core concepts, some nice quizzes, activities, and important questions for the board.">
+          Climate chapter – notes, quizzes & board questions
+        </button>
+        <button type="button" class="sample-q" data-query="I want to teach Waste Management to my class – I want it to be interactive with activities, mind maps, flash cards, quizzes and also leave the class with relevant homework.">
+          Waste Management – interactive activities, mind maps & quizzes
+        </button>
+      </div>
+      <div class="chat-container">
+        <div class="chat-header">Chat with Teaching Assistant</div>
+        <div class="chat-messages-wrap" id="chat-messages-wrap">
+          <div id="chat-messages"></div>
+          <div id="chat-welcome" class="chat-welcome">Send a message or pick a sample question to start.</div>
+        </div>
+        <div class="chat-input-wrap">
+          <div class="chat-inner">
+            <textarea id="chat-input" class="chat-input" rows="2" placeholder="Type your teaching request..." maxlength="50000"></textarea>
+            <button type="button" id="chat-send" class="chat-send" aria-label="Send"><i class="fas fa-arrow-up"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tab: How it works -->
+  <section id="tab-how-it-works" class="tab-panel">
+    <div class="steps-container">
+      <div class="steps-nav" id="steps-nav"></div>
+      <div class="step-card">
+        <h3 id="step-title">Step 1: File ingestion</h3>
+        <div class="step-image-wrap">
+          <img id="step-image" src="screens/step1_file_ingestion.heic" alt="Step 1 screenshot">
+          <div id="step-img-fallback" class="img-fallback" style="display:none;">
+            Screenshot: step1_file_ingestion.heic (HEIC may not display in all browsers; use Safari or convert to PNG.)
+          </div>
+        </div>
+        <div class="step-desc" id="step-desc"></div>
+      </div>
+      <div class="prev-next">
+        <button type="button" id="btn-prev"><i class="fas fa-chevron-left"></i> Previous</button>
+        <button type="button" id="btn-next">Next <i class="fas fa-chevron-right"></i></button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+(function() {
+  // ---------- Tab switching ----------
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var tab = this.getAttribute('data-tab');
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+      this.classList.add('active');
+      var panel = document.getElementById('tab-' + tab);
+      if (panel) panel.classList.add('active');
+    });
+  });
+
+  // ---------- Steps for "How it works" ----------
+  var steps = [
+    {
+      title: 'Step 1: File ingestion',
+      image: 'screens/step1_file_ingestion.heic',
+      desc: '<strong>Upload and ingest curriculum documents into the Knowledge Base.</strong> Source materials (e.g. Grade 10 Geography textbook as PDF or text) are uploaded, extracted, and then chunked with a configurable size and overlap. Each chunk is processed to extract NLP metadata (keywords, summary, key facts, subject, document type) before being embedded and stored in ChromaDB. This step is the foundation of the RAG pipeline.'
+    },
+    {
+      title: 'Step 2: Vector creation',
+      image: 'screens/step2_vector_creation.heic',
+      desc: '<strong>ChromaDB vector store and embeddings.</strong> Text chunks are converted to vectors using an embedding model (e.g. Instructor or Sentence Transformer). These vectors are stored in ChromaDB with cosine similarity, along with the rich metadata. The vector index enables fast semantic search so that teacher queries can retrieve the most relevant chunks from the Geography curriculum.'
+    },
+    {
+      title: 'Step 3: Agent build',
+      image: 'screens/step3_agent_build.heic',
+      desc: '<strong>Configure the Teaching Assistant agent.</strong> The agent is set up with a system prompt (Grade 10 Teaching Assistant role) and instructions: read the request, query the knowledge base via the RAG tool, then generate study notes, quizzes, activities, or homework. The agent uses a metadata-first flow: it receives a glimpse of top matching document metadata, then formulates 3–5 enriched queries to retrieve full chunks before generating the response.'
+    },
+    {
+      title: 'Step 4: Testing the agent',
+      image: 'screens/step4_testing_agent.heic',
+      desc: '<strong>End-to-end testing with sample queries.</strong> Teachers can ask natural-language questions such as “Build me a study note for Soil Resources” or “I want quizzes and activities for the Climate chapter.” The agent calls the RAG tool, retrieves curriculum-aligned content, and returns formatted study notes, quizzes, activities, and homework suggestions. This validates that the full pipeline—ingestion, retrieval, and generation—works as designed.'
+    }
+  ];
+  var currentStepIndex = 0;
+  function renderStep(index) {
+    currentStepIndex = index;
+    var s = steps[index];
+    document.getElementById('step-title').textContent = s.title;
+    document.getElementById('step-desc').innerHTML = s.desc;
+    var img = document.getElementById('step-image');
+    img.src = s.image;
+    img.alt = s.title;
+    img.onerror = function() {
+      img.style.display = 'none';
+      document.getElementById('step-img-fallback').style.display = 'block';
+      document.getElementById('step-img-fallback').textContent = 'Screenshot: ' + s.image + ' (HEIC may not display in all browsers; use Safari or convert to PNG for best compatibility.)';
+    };
+    img.onload = function() {
+      img.style.display = '';
+      document.getElementById('step-img-fallback').style.display = 'none';
+    };
+    document.querySelectorAll('.step-dot').forEach(function(dot, i) {
+      dot.classList.toggle('active', i === index);
+    });
+    document.getElementById('btn-prev').disabled = index === 0;
+    document.getElementById('btn-next').disabled = index === steps.length - 1;
+  }
+  var navEl = document.getElementById('steps-nav');
+  steps.forEach(function(_, i) {
+    var dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'step-dot' + (i === 0 ? ' active' : '');
+    dot.textContent = i + 1;
+    dot.addEventListener('click', function() { renderStep(i); });
+    navEl.appendChild(dot);
+  });
+  document.getElementById('btn-prev').addEventListener('click', function() {
+    if (currentStepIndex > 0) renderStep(currentStepIndex - 1);
+  });
+  document.getElementById('btn-next').addEventListener('click', function() {
+    if (currentStepIndex < steps.length - 1) renderStep(currentStepIndex + 1);
+  });
+  renderStep(0);
+
+  // ---------- Demo: Agent chat (same API as agent_html.html) ----------
+  var CONFIG = {
+    API_BASE_URL: 'https://api.intgr8.ai',
+    AGENT_ID:     'f02b43c9-3be0-4aa1-8d12-a81cc16a1924',
+    API_KEY:      'HLWUCz1edepv4hyQB0apCxysEW7sNBPxYz7TKRUhays',
+    AGENT_NAME:   'Grade 10 Teaching Assistant'
+  };
+  var sessionId = null;
+  var currentStreamImagePayloads = [];
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+  function escapeAttr(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function getMessagesEl() { return document.getElementById('chat-messages'); }
+  function getWelcomeEl() { return document.getElementById('chat-welcome'); }
+  function scrollToBottom() {
+    var wrap = document.getElementById('chat-messages-wrap');
+    if (wrap) wrap.scrollTop = wrap.scrollHeight;
+  }
+  function appendUserMessage(text) {
+    getWelcomeEl().style.display = 'none';
+    var m = getMessagesEl();
+    var div = document.createElement('div');
+    div.className = 'chat-msg chat-msg-user';
+    div.innerHTML = '<div class="chat-bubble">' + escapeHtml(text) + '</div>';
+    m.appendChild(div);
+    scrollToBottom();
+  }
+  function addThoughtMessage(thought) {
+    getWelcomeEl().style.display = 'none';
+    if (!thought || String(thought).trim() === '') return;
+    var m = getMessagesEl();
+    var id = 'chat-thought-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+    var block = document.createElement('div');
+    block.className = 'chat-msg chat-msg-assistant';
+    block.innerHTML = '<div class="chat-accordion">' +
+      '<button type="button" class="chat-accordion-trigger" aria-expanded="false" aria-controls="' + id + '"><i class="fas fa-chevron-down"></i> Reasoning</button>' +
+      '<div id="' + id + '" class="chat-accordion-panel" hidden><pre>' + escapeHtml(thought) + '</pre></div></div>';
+    m.appendChild(block);
+    block.querySelector('.chat-accordion-trigger').addEventListener('click', function() {
+      var panel = document.getElementById(id);
+      var open = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', !open);
+      if (panel) panel.hidden = open;
+    });
+    scrollToBottom();
+  }
+  function addFunctionCallMessage(name, args) {
+    getWelcomeEl().style.display = 'none';
+    var m = getMessagesEl();
+    var id = 'chat-tool-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+    var argsStr = typeof args === 'string' ? args : JSON.stringify(args != null ? args : {}, null, 2);
+    var block = document.createElement('div');
+    block.className = 'chat-msg chat-msg-assistant';
+    block.innerHTML = '<div class="chat-accordion">' +
+      '<button type="button" class="chat-accordion-trigger" aria-expanded="false" aria-controls="' + id + '"><i class="fas fa-chevron-down"></i> Tool: ' + escapeHtml(name || 'tool') + '</button>' +
+      '<div id="' + id + '" class="chat-accordion-panel" hidden><pre>' + escapeHtml(argsStr) + '</pre></div></div>';
+    m.appendChild(block);
+    block.querySelector('.chat-accordion-trigger').addEventListener('click', function() {
+      var panel = document.getElementById(id);
+      var open = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', !open);
+      if (panel) panel.hidden = open;
+    });
+    scrollToBottom();
+  }
+  function addFunctionResponseMessage(name, response) {
+    getWelcomeEl().style.display = 'none';
+    var m = getMessagesEl();
+    var id = 'chat-toolres-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+    var resultStr = typeof response === 'string' ? response : JSON.stringify(response != null ? response : {}, null, 2);
+    var block = document.createElement('div');
+    block.className = 'chat-msg chat-msg-assistant';
+    block.innerHTML = '<div class="chat-accordion">' +
+      '<button type="button" class="chat-accordion-trigger" aria-expanded="false" aria-controls="' + id + '"><i class="fas fa-chevron-down"></i> Tool result</button>' +
+      '<div id="' + id + '" class="chat-accordion-panel" hidden><pre>' + escapeHtml(resultStr) + '</pre></div></div>';
+    m.appendChild(block);
+    block.querySelector('.chat-accordion-trigger').addEventListener('click', function() {
+      var panel = document.getElementById(id);
+      var open = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', !open);
+      if (panel) panel.hidden = open;
+    });
+    scrollToBottom();
+  }
+  function appendAssistantBlock(content, imagePayloads) {
+    getWelcomeEl().style.display = 'none';
+    var m = getMessagesEl();
+    var div = document.createElement('div');
+    div.className = 'chat-msg chat-msg-assistant';
+    var html = (typeof marked !== 'undefined')
+      ? (marked.use && marked.use({ gfm: true }), marked.parse(content || ''))
+      : escapeHtml(content || '').replace(/\n/g, '<br>');
+    if (imagePayloads && imagePayloads.length > 0) {
+      imagePayloads.forEach(function(payload) {
+        var url = payload && (payload.image_url || payload.url);
+        if (url && typeof url === 'string') {
+          html += '<div class="chat-response-image-wrap"><img src="' + escapeAttr(url) + '" alt="Generated" loading="lazy"></div>';
+        }
+      });
+    }
+    div.innerHTML = '<div class="chat-bubble"><div class="chat-output-markdown">' + html + '</div></div>';
+    m.appendChild(div);
+    scrollToBottom();
+  }
+  function getImagePayload(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    if (obj.image_url) return obj;
+    if (obj.content && typeof obj.content === 'object' && obj.content.image_url) return obj.content;
+    return null;
+  }
+  function showTypingIndicator() {
+    if (document.getElementById('chat-typing')) return;
+    getWelcomeEl().style.display = 'none';
+    var div = document.createElement('div');
+    div.id = 'chat-typing';
+    div.className = 'chat-msg chat-msg-assistant';
+    div.innerHTML = '<div class="chat-bubble"><div class="chat-typing-dots"><span></span><span></span><span></span></div></div>';
+    getMessagesEl().appendChild(div);
+    scrollToBottom();
+  }
+  function hideTypingIndicator() {
+    var el = document.getElementById('chat-typing');
+    if (el) el.remove();
+  }
+  function processOneEvent(data) {
+    if (!data || typeof data !== 'object') return;
+    if (data.session_id) sessionId = data.session_id;
+    if (data.thought !== undefined) {
+      addThoughtMessage(data.thought);
+      return;
+    }
+    var type = data.type || data.event;
+    var payload = data.payload || data;
+    if (type === 'thought' || (payload && payload.thought !== undefined)) {
+      addThoughtMessage(data.thought || (payload && payload.thought) || (payload && payload.content) || '');
+      return;
+    }
+    if (type === 'stream' && payload && payload.delta) return;
+    if (type === 'function_call' || type === 'toolUse' || data.function_call !== undefined) {
+      var name = (payload && payload.tool_name) || data.function_call || 'tool';
+      var args = (payload && payload.args) || (payload && payload.arguments) || data.args;
+      if (typeof args === 'string') try { args = JSON.parse(args); } catch (e) {}
+      addFunctionCallMessage(name, args != null ? args : {});
+      return;
+    }
+    if (type === 'function_response' || type === 'toolResult' || data.function_response !== undefined) {
+      var resp = (payload && (payload.response || payload.result)) || data.response;
+      var name = (payload && payload.tool_name) || data.function_response || 'tool';
+      var imgPayload = getImagePayload(resp);
+      if (imgPayload) currentStreamImagePayloads.push(imgPayload);
+      addFunctionResponseMessage(name, resp != null ? resp : '');
+      return;
+    }
+    if (type === 'final_response' || type === 'result' || data.final_response !== undefined) {
+      hideTypingIndicator();
+      var fr = (payload && payload.final_response) || payload || data.final_response;
+      if (typeof fr === 'string') try { fr = JSON.parse(fr); } catch (e) { fr = { content: fr }; }
+      var content = (fr && fr.content != null) ? fr.content : (typeof fr === 'string' ? fr : JSON.stringify(fr || {}));
+      var imagePayloads = currentStreamImagePayloads.length ? currentStreamImagePayloads.slice() : undefined;
+      currentStreamImagePayloads = [];
+      appendAssistantBlock(content, imagePayloads);
+      return;
+    }
+    if (type === 'error') {
+      hideTypingIndicator();
+      var msg = (payload && (payload.detail || payload.message)) || (payload && payload.content) || JSON.stringify(payload || data);
+      appendAssistantBlock(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    }
+  }
+  function sendMessage(text) {
+    text = (text || '').trim();
+    var input = document.getElementById('chat-input');
+    if (!text && input) text = (input.value || '').trim();
+    if (!text) return;
+    var sendBtn = document.getElementById('chat-send');
+    if (sendBtn) sendBtn.disabled = true;
+    currentStreamImagePayloads = [];
+    if (input) input.value = '';
+    appendUserMessage(text);
+    showTypingIndicator();
+    var formData = new FormData();
+    formData.append('agent_id', CONFIG.AGENT_ID);
+    formData.append('user_input', text);
+    if (sessionId) formData.append('session_id', sessionId);
+    var url = (CONFIG.API_BASE_URL || '').replace(/\/$/, '') + '/api/v1/published_agent_manager/chat';
+    fetch(url, {
+      method: 'POST',
+      headers: { 'X-API-Key': CONFIG.API_KEY },
+      body: formData
+    }).then(function(response) {
+      if (!response.ok) return response.text().then(function(t) { throw new Error(t || response.statusText); });
+      if (!response.body) { hideTypingIndicator(); throw new Error('No response body'); }
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      function pump(result) {
+        if (result.done) {
+          if (buffer.trim()) {
+            buffer.split(/\n+/).forEach(function(line) {
+              line = line.trim();
+              var jsonStr = line.startsWith('data: ') ? line.slice(6).trim() : (line.startsWith('{') ? line : null);
+              if (jsonStr && jsonStr !== '[DONE]') { try { processOneEvent(JSON.parse(jsonStr)); } catch (e) {} }
+            });
+          }
+          hideTypingIndicator();
+          if (sendBtn) sendBtn.disabled = false;
+          return;
+        }
+        buffer += decoder.decode(result.value, { stream: true });
+        var lines = buffer.split(/\n/);
+        buffer = lines.pop() || '';
+        lines.forEach(function(line) {
+          line = line.trim();
+          if (!line) return;
+          var jsonStr = line.startsWith('data: ') ? line.slice(6).trim() : (line.startsWith('{') ? line : null);
+          if (jsonStr && jsonStr !== '[DONE]') {
+            try { processOneEvent(JSON.parse(jsonStr)); if (sendBtn) sendBtn.disabled = false; } catch (e) {}
+          }
+        });
+        return reader.read().then(pump);
+      }
+      return reader.read().then(pump);
+    }).catch(function(err) {
+      hideTypingIndicator();
+      appendAssistantBlock(err.message || 'Request failed', null);
+      if (sendBtn) sendBtn.disabled = false;
+    });
+  }
+  document.getElementById('chat-send').addEventListener('click', function() { sendMessage(); });
+  document.getElementById('chat-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  document.querySelectorAll('.sample-q').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var q = this.getAttribute('data-query');
+      if (q) sendMessage(q);
+    });
+  });
+})();
+  </script>
+</body>
+</html>

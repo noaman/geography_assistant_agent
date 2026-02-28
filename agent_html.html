@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intgr8 – API Integration Example (Agent Card + Chat)</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 24px; background: #f5f5f5; color: #111; }
+    .doc-section { max-width: 720px; margin: 0 auto 32px; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .doc-section h1 { font-size: 1.5rem; margin: 0 0 8px; }
+    .doc-section p { margin: 0 0 12px; color: #444; font-size: 0.95rem; line-height: 1.5; }
+    .config-box { background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0; font-family: monospace; font-size: 0.85rem; }
+    .config-box strong { display: block; margin-bottom: 4px; color: #374151; }
+    .agent-card { display: flex; align-items: center; gap: 16px; padding: 20px; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border: 1px solid #e5e7eb; border-radius: 12px; margin: 16px 0; }
+    .agent-card-icon { width: 56px; height: 56px; border-radius: 12px; background: #7C3AED; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+    .agent-card-body { flex: 1; min-width: 0; }
+    .agent-card-name { font-weight: 600; font-size: 1.1rem; margin: 0 0 4px; }
+    .agent-card-desc { margin: 0; color: #6b7280; font-size: 0.9rem; line-height: 1.4; }
+    .agent-card-actions { margin-top: 12px; }
+    .btn-chat { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #7C3AED; color: #fff; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 500; cursor: pointer; }
+    .btn-chat:hover { background: #6D28D9; }
+    .chat-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 9998; padding: 16px; }
+    .chat-modal-overlay.open { display: flex; }
+    .chat-modal { width: 100%; max-width: 560px; height: 85vh; max-height: 640px; background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); display: flex; flex-direction: column; overflow: hidden; }
+    .chat-modal-header { padding: 14px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+    .chat-modal-title { font-weight: 600; font-size: 1rem; }
+    .chat-modal-close { background: none; border: none; color: #6b7280; cursor: pointer; padding: 4px; font-size: 1.2rem; }
+    .chat-modal-messages { flex: 1; overflow-y: auto; padding: 12px; }
+    .chat-modal-welcome { color: #6b7280; font-size: 0.9rem; padding: 12px 0; }
+    .chat-msg { margin-bottom: 12px; }
+    .chat-msg-user .chat-bubble { background: #7C3AED; color: #fff; margin-left: auto; max-width: 85%; border-radius: 16px 16px 4px 16px; }
+    .chat-msg-assistant .chat-bubble { background: #f3f4f6; color: #111; max-width: 95%; border-radius: 16px 16px 16px 4px; }
+    .chat-bubble { padding: 10px 14px; font-size: 0.9rem; line-height: 1.5; }
+    .chat-modal-input-wrap { padding: 12px; border-top: 1px solid #e5e7eb; }
+    .chat-modal-inner { display: flex; gap: 8px; align-items: flex-end; }
+    .chat-modal-input { flex: 1; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 12px; font-size: 0.9rem; resize: none; min-height: 44px; max-height: 120px; }
+    .chat-modal-send { width: 44px; height: 44px; border-radius: 12px; background: #7C3AED; color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .chat-modal-send:hover { background: #6D28D9; }
+    .chat-modal-send:disabled { opacity: 0.6; cursor: not-allowed; }
+    .chat-typing { padding: 10px 14px; }
+    .chat-typing-dots span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #6b7280; margin: 0 2px; animation: blink 1.4s infinite both; }
+    .chat-typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .chat-typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,80%,100% { opacity: 0.4; } 40% { opacity: 1; } }
+    .chat-accordion { margin: 8px 0; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+    .chat-accordion-trigger { width: 100%; padding: 8px 12px; text-align: left; background: #f9fafb; border: none; cursor: pointer; font-size: 0.85rem; color: #111; display: flex; align-items: center; gap: 6px; }
+    .chat-accordion-panel pre { margin: 0; padding: 12px; font-size: 0.75rem; overflow-x: auto; background: #fff; border-top: 1px solid #e5e7eb; white-space: pre-wrap; word-break: break-word; }
+    .chat-output-markdown { font-size: 0.9rem; line-height: 1.6; }
+    .chat-output-markdown p { margin: 0 0 0.5em; }
+    .chat-output-markdown pre { background: #f3f4f6; padding: 8px; border-radius: 6px; overflow-x: auto; font-size: 0.8rem; }
+    .chat-response-image-wrap { margin: 8px 0; }
+    .chat-response-image-wrap img { max-width: 100%; height: auto; border-radius: 8px; }
+    .chat-prompt-enhancers-wrap { padding: 8px 0; border-bottom: 1px solid #e5e7eb; margin-bottom: 8px; }
+    .chat-prompt-enhancers-list { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+    .chat-enhancer-block { display: flex; flex-direction: column; gap: 4px; min-width: 120px; }
+    .chat-enhancer-block label { font-size: 0.8rem; font-weight: 500; color: #374151; }
+    .chat-enhancer-block select { padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.85rem; background: #fff; }
+    .chat-attached-files { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .chat-attached-file { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(124, 58, 237, 0.08); border-radius: 8px; font-size: 0.85rem; color: #374151; }
+    .chat-attached-file i.fas { color: #7C3AED; font-size: 0.9rem; }
+    .chat-attached-remove { background: none; border: none; color: #6b7280; cursor: pointer; padding: 2px; margin-left: 2px; }
+    .chat-attached-remove:hover { color: #111; }
+    .chat-modal-inner { display: flex; gap: 8px; align-items: flex-end; }
+    .chat-input-attach-wrap { flex-shrink: 0; }
+    .chat-btn-attach { width: 44px; height: 44px; border-radius: 12px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .chat-btn-attach:hover { background: #f9fafb; color: #7C3AED; }
+  </style>
+</head>
+<body>
+
+  <!--
+  =============================================================================
+  INTRG8 API INTEGRATION EXAMPLE – Agent Card + Chat
+  =============================================================================
+  This page shows an agent card. When the user clicks "Chat with agent", an
+  AI chat interface opens (modal) and communicates with the Published Agent
+  Chat API using your AGENT_ID and API_KEY.
+
+  SETUP:
+  1. Set API_BASE_URL, AGENT_ID, and API_KEY in the CONFIG object below.
+  2. Optionally set AGENT_NAME and AGENT_DESCRIPTION for the card.
+  3. For production, ensure your API allows CORS from your origin, or call the
+     chat endpoint from your backend and stream to the client.
+  =============================================================================
+  -->
+
+  <div class="doc-section">
+    <h1>API integration example</h1>
+    <p>This page demonstrates an agent card and an on-demand chat modal. Configure your agent and API key below, then click &quot;Chat with agent&quot; to open the AI chat.</p>
+
+    <div class="config-box">
+      <strong>Configuration (edit in script)</strong>
+      <div>API_BASE_URL – e.g. https://api.intgr8.ai</div>
+      <div>AGENT_ID – your published agent UUID</div>
+      <div>API_KEY – your API key (X-API-Key)</div>
+      <div>AGENT_NAME / AGENT_DESCRIPTION – shown on the card</div>
+      <div>PROMPT_ENHANCER_CONTENT – optional; set to agent’s prompt_enhancer_content to show voice/option selectors above the input</div>
+      <div>image_input / audio_input / video_input / document_input – when true, allow uploading those file types</div>
+    </div>
+
+    <!-- Agent card -->
+    <div class="agent-card" id="agent-card">
+      <div class="agent-card-icon"><i class="fas fa-robot"></i></div>
+      <div class="agent-card-body">
+        <div class="agent-card-name" id="api-agent-name">My Agent</div>
+        <p class="agent-card-desc" id="api-agent-desc">Ask me anything. Click below to start a conversation.</p>
+        <div class="agent-card-actions">
+          <button type="button" class="btn-chat" id="api-btn-chat-with-agent">
+            <i class="fas fa-comment-dots"></i> Chat with agent
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat modal (hidden until "Chat with agent" is clicked) -->
+  <div class="chat-modal-overlay" id="api-chat-overlay">
+    <div class="chat-modal">
+      <div class="chat-modal-header">
+        <span class="chat-modal-title" id="api-chat-modal-title">Chat</span>
+        <button type="button" class="chat-modal-close" id="api-chat-modal-close" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="chat-modal-messages" id="api-chat-messages-wrap">
+        <div id="api-chat-messages"></div>
+        <div id="api-chat-welcome" class="chat-modal-welcome">Send a message to start.</div>
+      </div>
+      <div class="chat-modal-input-wrap">
+        <div id="api-chat-prompt-enhancers-wrap" class="chat-prompt-enhancers-wrap" style="display: none;">
+          <div id="api-chat-prompt-enhancers-list" class="chat-prompt-enhancers-list"></div>
+        </div>
+        <div id="api-chat-attached-files" class="chat-attached-files"></div>
+        <div class="chat-modal-inner">
+          <div class="chat-input-attach-wrap" id="api-chat-attach-wrap" style="display: none;">
+            <button type="button" class="chat-btn-attach" id="api-chat-btn-attach" title="Add photos &amp; files" aria-label="Attach files"><i class="fas fa-paperclip"></i></button>
+          </div>
+          <input type="file" id="api-chat-file-input" multiple style="position:absolute;left:-9999px;">
+          <textarea id="api-chat-input" class="chat-modal-input" rows="2" placeholder="Type a message..." maxlength="50000"></textarea>
+          <button type="button" id="api-chat-send" class="chat-modal-send" aria-label="Send"><i class="fas fa-arrow-up"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+(function() {
+  // ========== CONFIGURATION – Set credentials and agent display info ==========
+  var CONFIG = {
+    API_BASE_URL: "https://api.intgr8.ai",
+    AGENT_ID:     "f02b43c9-3be0-4aa1-8d12-a81cc16a1924",
+    API_KEY:      'HLWUCz1edepv4hyQB0apCxysEW7sNBPxYz7TKRUhays',
+    AGENT_NAME:      "Grade 10 Teaching Assistant",
+    AGENT_DESCRIPTION: "",
+    PROMPT_ENHANCER_CONTENT: [],
+    image_input:   false,
+    audio_input:   false,
+    video_input:   false,
+    document_input: false
+  };
+
+  var sessionId = null;
+  var promptEnhancerContent = null; // Resolved from CONFIG; used when building user_input and payload
+  var attachedFiles = [];
+  var currentStreamImagePayloads = [];
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+  function escapeAttr(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function isImageLinkUrl(url) {
+    if (!url || typeof url !== 'string') return false;
+    var u = url.trim();
+    if (u.indexOf('data:image/') === 0) return true;
+    var lower = u.toLowerCase();
+    return /\.(png|jpe?g|gif|webp|avif)(\?|$)/.test(lower) || lower.indexOf('/image/') !== -1;
+  }
+  function getImagePayload(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    if (obj.image_url) return obj;
+    if (obj.content && typeof obj.content === 'object' && obj.content.image_url) return obj.content;
+    return null;
+  }
+
+  /** Resolve inline prompt enhancer content from config (prompt_enhancer_content or prompt_enchancer_content). */
+  function getInlineEnhancerContent(config) {
+    if (!config) return null;
+    var raw = config.prompt_enhancer_content != null ? config.prompt_enhancer_content : config.prompt_enchancer_content;
+    if (raw == null) return null;
+    if (typeof raw === 'string') try { raw = JSON.parse(raw); } catch (e) { return null; }
+    return Array.isArray(raw) && raw.length > 0 ? raw : null;
+  }
+
+  /** Render prompt enhancers UI from inline content. */
+  function loadEnhancerContentsFromInline(inlineData) {
+    if (!Array.isArray(inlineData) || inlineData.length === 0) return;
+    var wrap = document.getElementById('api-chat-prompt-enhancers-wrap');
+    var list = document.getElementById('api-chat-prompt-enhancers-list');
+    if (!wrap || !list) return;
+    wrap.style.display = 'block';
+    list.innerHTML = '';
+    inlineData.forEach(function(item, enhancerIndex) {
+      var enhancers = item.enhancers || [];
+      var options = enhancers.map(function(opt, contentIndex) {
+        var title = (opt.title != null && opt.title !== '') ? opt.title : 'Option ' + (contentIndex + 1);
+        return '<option value="' + contentIndex + '">' + String(title).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</option>';
+      }).join('');
+      var div = document.createElement('div');
+      div.className = 'chat-enhancer-block';
+      div.setAttribute('data-enhancer-index', String(enhancerIndex));
+      div.innerHTML = '<label class="form-label">' + String(item.name || 'Enhancer').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</label>' +
+        '<select class="form-input chat-enhancer-select"><option value="">— None —</option>' + options + '</select>';
+      list.appendChild(div);
+    });
+  }
+
+  function getSelectedPromptEnhancers() {
+    var out = [];
+    document.querySelectorAll('#api-chat-prompt-enhancers-list .chat-enhancer-block').forEach(function(block) {
+      var sel = block.querySelector('.chat-enhancer-select');
+      var val = sel && sel.value ? sel.value : null;
+      if (val === null || val === '') return;
+      var enhancerIndex = block.getAttribute('data-enhancer-index');
+      if (enhancerIndex != null) out.push({ enhancer_index: parseInt(enhancerIndex, 10), content_index: parseInt(val, 10) });
+    });
+    return out;
+  }
+
+  function getChosenEnhancerContent() {
+    if (!promptEnhancerContent) return [];
+    var selections = getSelectedPromptEnhancers();
+    var out = [];
+    selections.forEach(function(s) {
+      if (s.enhancer_index == null || s.content_index == null) return;
+      var item = promptEnhancerContent[s.enhancer_index];
+      if (!item || !item.enhancers) return;
+      var opt = item.enhancers[s.content_index];
+      if (!opt) return;
+      out.push({
+        name: item.name || '',
+        title: opt.title != null ? opt.title : '',
+        content: opt.content != null ? opt.content : ''
+      });
+    });
+    return out;
+  }
+
+  function buildUserInputWithEnhancerContent(userText) {
+    if (!userText) return userText;
+    var chosenContent = getChosenEnhancerContent();
+    if (!chosenContent.length) return userText;
+    var block = chosenContent.map(function(c) {
+      var namePart = c.name ? c.name + ':\n' : '';
+      return namePart + (c.content || '').trim();
+    }).filter(Boolean).join('\n\n');
+    return userText.trim() + '\n\n---\n[Prompt enhancer context]\n' + block + '\n---';
+  }
+
+  /** Build file input accept string from config (image_input, document_input, audio_input, video_input). */
+  function buildFileAcceptString(config) {
+    if (!config) return '';
+    var parts = [];
+    if (config.image_input) parts.push('image/*');
+    if (config.document_input) parts.push('.pdf,.txt,.doc,.docx');
+    if (config.audio_input) parts.push('audio/*');
+    if (config.video_input) parts.push('video/*');
+    return parts.join(',');
+  }
+
+  function renderAttachedFiles() {
+    var container = document.getElementById('api-chat-attached-files');
+    if (!container) return;
+    if (attachedFiles.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+    container.innerHTML = '';
+    attachedFiles.forEach(function(file, idx) {
+      var span = document.createElement('span');
+      span.className = 'chat-attached-file';
+      var icon = document.createElement('i');
+      if (file.type.startsWith('image/')) icon.className = 'fas fa-image';
+      else if (file.type.startsWith('video/')) icon.className = 'fas fa-video';
+      else if (file.type.startsWith('audio/')) icon.className = 'fas fa-microphone';
+      else if (file.type && file.type.includes('pdf')) icon.className = 'fas fa-file-pdf';
+      else icon.className = 'fas fa-file-alt';
+      span.appendChild(icon);
+      var label = document.createElement('span');
+      label.textContent = file.name.length > 28 ? file.name.slice(0, 25) + '...' : file.name;
+      span.appendChild(label);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chat-attached-remove';
+      btn.setAttribute('data-idx', String(idx));
+      btn.innerHTML = '<i class="fas fa-times"></i>';
+      span.appendChild(btn);
+      container.appendChild(span);
+    });
+    container.querySelectorAll('.chat-attached-remove').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var idx = parseInt(btn.getAttribute('data-idx'), 10);
+        attachedFiles.splice(idx, 1);
+        renderAttachedFiles();
+      });
+    });
+  }
+
+  function renderMarkdownWithImages(content, optionalImagePayloads) {
+    var text = content || '';
+    var imagesFromPayloads = '';
+    if (optionalImagePayloads && optionalImagePayloads.length > 0) {
+      optionalImagePayloads.forEach(function(payload) {
+        var url = payload && (payload.image_url || payload.url);
+        if (url && typeof url === 'string') {
+          imagesFromPayloads += '<div class="chat-response-image-wrap"><img src="' + escapeAttr(url) + '" alt="Generated" loading="lazy"></div>';
+          text = text.split(url).join('').replace(/\*\*Image URL\*\*\s*:\s*\n?/gi, '');
+        }
+      });
+    }
+    var images = [], idx = 0;
+    function nextPlaceholder() { return '<!-- IMG_' + (idx++) + ' -->'; }
+    text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function(match, alt, url) {
+      if (!url.trim()) return match;
+      images.push({ alt: (alt || '').trim() || 'Image', url: url.trim() });
+      return nextPlaceholder();
+    });
+    text = text.replace(/\[([^\]]*)\]\(([^)]+)\)/g, function(match, alt, url) {
+      if (!url.trim() || !isImageLinkUrl(url.trim())) return match;
+      images.push({ alt: (alt || '').trim() || 'Image', url: url.trim() });
+      return nextPlaceholder();
+    });
+    var html = (typeof marked !== 'undefined')
+      ? (marked.use && marked.use({ gfm: true }), marked.parse(text))
+      : escapeHtml(text).replace(/\n/g, '<br>');
+    images.forEach(function(img, i) {
+      html = html.replace(new RegExp('<!-- IMG_' + i + ' -->', 'g'), '<div class="chat-response-image-wrap"><img src="' + escapeAttr(img.url) + '" alt="' + escapeAttr(img.alt) + '" loading="lazy"></div>');
+    });
+    return imagesFromPayloads + html;
+  }
+
+  function renderContent(format, content, imagePayloads) {
+    if (content == null) content = '';
+    var obj = content;
+    if (typeof content === 'string' && content.trim().charAt(0) === '{') {
+      try { obj = JSON.parse(content); } catch (e) { obj = content; }
+    }
+    var imagePayload = getImagePayload(obj);
+    if (imagePayload) {
+      var parts = [];
+      if (imagePayload.text_output) parts.push('<div class="chat-bubble">' + escapeHtml(imagePayload.text_output) + '</div>');
+      parts.push('<div class="chat-response-image-wrap"><img src="' + escapeAttr(imagePayload.image_url) + '" alt="Generated" loading="lazy"></div>');
+      return parts.join('');
+    }
+    if ((format || 'text').toLowerCase() === 'json') {
+      try {
+        var parsed = typeof content === 'string' ? JSON.parse(content) : content;
+        return '<pre>' + escapeHtml(JSON.stringify(parsed, null, 2)) + '</pre>';
+      } catch (e) { return '<pre>' + escapeHtml(content) + '</pre>'; }
+    }
+    return '<div class="chat-output-markdown">' + renderMarkdownWithImages(content, imagePayloads) + '</div>';
+  }
+
+  function getMessagesEl() { return document.getElementById('api-chat-messages'); }
+  function getWelcomeEl() { return document.getElementById('api-chat-welcome'); }
+  function scrollToBottom() {
+    var wrap = document.getElementById('api-chat-messages-wrap');
+    if (wrap) wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  function appendUserMessage(text) {
+    var w = getWelcomeEl(); if (w) w.style.display = 'none';
+    var m = getMessagesEl();
+    var div = document.createElement('div');
+    div.className = 'chat-msg chat-msg-user';
+    div.innerHTML = '<div class="chat-bubble">' + escapeHtml(text) + '</div>';
+    m.appendChild(div);
+    scrollToBottom();
+  }
+
+  function addThoughtMessage(thought) {
+    var w = getWelcomeEl(); if (w) w.style.display = 'none';
+    if (!thought || String(thought).trim() === '') return;
+    var m = getMessagesEl();
+    var id = 'api-thought-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+    var block = document.createElement('div');
+    block.className = 'chat-msg chat-msg-assistant';
+    block.innerHTML = '<div class="chat-accordion">' +
+      '<button type="button" class="chat-accordion-trigger" aria-expanded="false" aria-controls="' + id + '"><i class="fas fa-chevron-down"></i> Reasoning</button>' +
+      '<div id="' + id + '" class="chat-accordion-panel" hidden><pre>' + escapeHtml(thought) + '</pre></div></div>';
+    m.appendChild(block);
+    block.querySelector('.chat-accordion-trigger').addEventListener('click', function() {
+      var panel = document.getElementById(id);
+      var open = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', !open);
+      if (panel) panel.hidden = open;
+    });
+    scrollToBottom();
+  }
+
+  function addFunctionCallMessage(name, args) {
+    var w = getWelcomeEl(); if (w) w.style.display = 'none';
+    var m = getMessagesEl();
+    var id = 'api-tool-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+    var argsStr = typeof args === 'string' ? args : JSON.stringify(args != null ? args : {}, null, 2);
+    var block = document.createElement('div');
+    block.className = 'chat-msg chat-msg-assistant';
+    block.innerHTML = '<div class="chat-accordion">' +
+      '<button type="button" class="chat-accordion-trigger" aria-expanded="false" aria-controls="' + id + '"><i class="fas fa-chevron-down"></i> Tool: ' + escapeHtml(name || 'tool') + '</button>' +
+      '<div id="' + id + '" class="chat-accordion-panel" hidden><pre>' + escapeHtml(argsStr) + '</pre></div></div>';
+    m.appendChild(block);
+    block.querySelector('.chat-accordion-trigger').addEventListener('click', function() {
+      var panel = document.getElementById(id);
+      var open = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', !open);
+      if (panel) panel.hidden = open;
+    });
+    scrollToBottom();
+  }
+
+  function addFunctionResponseMessage(name, response) {
+    var w = getWelcomeEl(); if (w) w.style.display = 'none';
+    var m = getMessagesEl();
+    var id = 'api-toolres-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+    var resultStr = typeof response === 'string' ? response : JSON.stringify(response != null ? response : {}, null, 2);
+    var block = document.createElement('div');
+    block.className = 'chat-msg chat-msg-assistant';
+    block.innerHTML = '<div class="chat-accordion">' +
+      '<button type="button" class="chat-accordion-trigger" aria-expanded="false" aria-controls="' + id + '"><i class="fas fa-chevron-down"></i> Tool result</button>' +
+      '<div id="' + id + '" class="chat-accordion-panel" hidden><pre>' + escapeHtml(resultStr) + '</pre></div></div>';
+    m.appendChild(block);
+    block.querySelector('.chat-accordion-trigger').addEventListener('click', function() {
+      var panel = document.getElementById(id);
+      var open = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', !open);
+      if (panel) panel.hidden = open;
+    });
+    scrollToBottom();
+  }
+
+  function appendAssistantBlock(opts) {
+    var w = getWelcomeEl(); if (w) w.style.display = 'none';
+    var m = getMessagesEl();
+    var format = (opts.format || 'text').toLowerCase();
+    var content = opts.content != null ? opts.content : '';
+    var imagePayloads = opts.imagePayloads;
+    var html = renderContent(format, content, imagePayloads);
+    var div = document.createElement('div');
+    div.className = 'chat-msg chat-msg-assistant';
+    div.innerHTML = '<div class="chat-bubble">' + html + '</div>';
+    m.appendChild(div);
+    scrollToBottom();
+  }
+
+  function showTypingIndicator() {
+    if (document.getElementById('api-chat-typing')) return;
+    var w = getWelcomeEl(); if (w) w.style.display = 'none';
+    var div = document.createElement('div');
+    div.id = 'api-chat-typing';
+    div.className = 'chat-msg chat-msg-assistant';
+    div.innerHTML = '<div class="chat-bubble chat-typing"><div class="chat-typing-dots"><span></span><span></span><span></span></div></div>';
+    getMessagesEl().appendChild(div);
+    scrollToBottom();
+  }
+  function hideTypingIndicator() {
+    var el = document.getElementById('api-chat-typing');
+    if (el) el.remove();
+  }
+
+  function processOneEvent(data) {
+    if (!data || typeof data !== 'object') return;
+    if (data.session_id) sessionId = data.session_id;
+    if (data.thought !== undefined) { addThoughtMessage(data.thought); return; }
+    var type = data.type || data.event;
+    var payload = data.payload || data;
+    if (type === 'thought' || (payload && payload.thought !== undefined)) {
+      addThoughtMessage(data.thought || (payload && payload.thought) || (payload && payload.content) || '');
+      return;
+    }
+    if (type === 'stream' && payload && payload.delta) return;
+    if (type === 'function_call' || type === 'toolUse' || data.function_call !== undefined) {
+      var name = (payload && payload.tool_name) || data.function_call || 'tool';
+      var args = (payload && payload.args) || (payload && payload.arguments) || data.args;
+      if (typeof args === 'string') try { args = JSON.parse(args); } catch (e) {}
+      addFunctionCallMessage(name, args != null ? args : {});
+      return;
+    }
+    if (type === 'function_response' || type === 'toolResult' || data.function_response !== undefined) {
+      var resp = (payload && (payload.response || payload.result)) || data.response;
+      var name = (payload && payload.tool_name) || data.function_response || 'tool';
+      var imgPayload = getImagePayload(resp);
+      if (imgPayload) currentStreamImagePayloads.push(imgPayload);
+      addFunctionResponseMessage(name, resp != null ? resp : '');
+      return;
+    }
+    if (type === 'final_response' || type === 'result' || data.final_response !== undefined) {
+      hideTypingIndicator();
+      var fr = (payload && payload.final_response) || payload || data.final_response;
+      if (typeof fr === 'string') try { fr = JSON.parse(fr); } catch (e) { fr = { content: fr }; }
+      if (fr && (fr.content !== undefined || fr.format)) {
+        var format = (fr.format || 'text').toLowerCase();
+        var content = fr.content != null ? fr.content : (typeof fr === 'string' ? fr : JSON.stringify(fr));
+        var imagePayloads = currentStreamImagePayloads.length ? currentStreamImagePayloads.slice() : undefined;
+        currentStreamImagePayloads = [];
+        appendAssistantBlock({ format: format, content: content, imagePayloads: imagePayloads });
+      } else if (fr != null) {
+        var extracted = typeof fr === 'object' ? JSON.stringify(fr, null, 2) : String(fr);
+        var imagePayloads = currentStreamImagePayloads.length ? currentStreamImagePayloads.slice() : undefined;
+        currentStreamImagePayloads = [];
+        appendAssistantBlock({ format: 'json', content: extracted, imagePayloads: imagePayloads });
+      }
+      return;
+    }
+    if (type === 'error') {
+      hideTypingIndicator();
+      var msg = (payload && (payload.detail || payload.message)) || (payload && payload.content) || JSON.stringify(payload || data);
+      appendAssistantBlock({ content: typeof msg === 'string' ? msg : JSON.stringify(msg), format: 'text' });
+    }
+  }
+
+  function sendMessage() {
+    var input = document.getElementById('api-chat-input');
+    var text = (input && input.value || '').trim();
+    if (!text && attachedFiles.length === 0) return;
+    var sendBtn = document.getElementById('api-chat-send');
+    if (sendBtn) sendBtn.disabled = true;
+    currentStreamImagePayloads = [];
+
+    var userInputToSend = text;
+    if (promptEnhancerContent && promptEnhancerContent.length > 0) {
+      userInputToSend = buildUserInputWithEnhancerContent(text);
+    }
+    var formData = new FormData();
+    formData.append('agent_id', CONFIG.AGENT_ID);
+    formData.append('user_input', userInputToSend);
+    if (promptEnhancerContent && promptEnhancerContent.length > 0) {
+      var chosenContent = getChosenEnhancerContent();
+      if (chosenContent.length) formData.append('prompt_enhancer_content', JSON.stringify(chosenContent));
+    }
+    if (sessionId) formData.append('session_id', sessionId);
+    attachedFiles.forEach(function(f, i) { formData.append('files', f, f.name || ('file_' + i)); });
+    attachedFiles = [];
+    renderAttachedFiles();
+
+    input.value = '';
+    appendUserMessage(text || '(files attached)');
+    showTypingIndicator();
+
+    var url = (CONFIG.API_BASE_URL || '').replace(/\/$/, '') + '/api/v1/published_agent_manager/chat';
+    fetch(url, {
+      method: 'POST',
+      headers: { 'X-API-Key': CONFIG.API_KEY },
+      body: formData
+    }).then(function(response) {
+      if (!response.ok) return response.text().then(function(t) { throw new Error(t || response.statusText); });
+      if (!response.body) { hideTypingIndicator(); throw new Error('No response body'); }
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      function pump(result) {
+        if (result.done) {
+          if (buffer.trim()) {
+            buffer.split(/\n+/).forEach(function(line) {
+              line = line.trim();
+              var jsonStr = line.startsWith('data: ') ? line.slice(6).trim() : (line.startsWith('{') ? line : null);
+              if (jsonStr && jsonStr !== '[DONE]') {
+                try { processOneEvent(JSON.parse(jsonStr)); } catch (e) {}
+              }
+            });
+          }
+          hideTypingIndicator();
+          if (sendBtn) sendBtn.disabled = false;
+          return;
+        }
+        buffer += decoder.decode(result.value, { stream: true });
+        var lines = buffer.split(/\n/);
+        buffer = lines.pop() || '';
+        lines.forEach(function(line) {
+          line = line.trim();
+          if (!line) return;
+          var jsonStr = line.startsWith('data: ') ? line.slice(6).trim() : (line.startsWith('{') ? line : null);
+          if (jsonStr && jsonStr !== '[DONE]') {
+            try {
+              processOneEvent(JSON.parse(jsonStr));
+              if (sendBtn) sendBtn.disabled = false;
+            } catch (e) {}
+          }
+        });
+        return reader.read().then(pump);
+      }
+      return reader.read().then(pump);
+    }).catch(function(err) {
+      hideTypingIndicator();
+      appendAssistantBlock({ content: err.message || 'Request failed', format: 'text' });
+      if (sendBtn) sendBtn.disabled = false;
+    });
+  }
+
+  function openChatModal() {
+    document.getElementById('api-chat-overlay').classList.add('open');
+    document.getElementById('api-chat-modal-title').textContent = 'Chat with ' + (CONFIG.AGENT_NAME || 'Agent');
+  }
+  function closeChatModal() {
+    document.getElementById('api-chat-overlay').classList.remove('open');
+  }
+
+  function init() {
+    document.getElementById('api-agent-name').textContent = CONFIG.AGENT_NAME || 'My Agent';
+    document.getElementById('api-agent-desc').textContent = CONFIG.AGENT_DESCRIPTION || 'Ask me anything. Click below to start a conversation.';
+
+    promptEnhancerContent = CONFIG.PROMPT_ENHANCER_CONTENT || getInlineEnhancerContent(CONFIG);
+    if (promptEnhancerContent && promptEnhancerContent.length > 0) {
+      loadEnhancerContentsFromInline(promptEnhancerContent);
+    }
+
+    var canAttach = CONFIG.image_input || CONFIG.document_input || CONFIG.audio_input || CONFIG.video_input;
+    var attachWrap = document.getElementById('api-chat-attach-wrap');
+    var fileInput = document.getElementById('api-chat-file-input');
+    if (attachWrap) attachWrap.style.display = canAttach ? 'block' : 'none';
+    if (fileInput) {
+      fileInput.setAttribute('accept', buildFileAcceptString(CONFIG));
+      fileInput.addEventListener('change', function() {
+        var files = this.files;
+        for (var i = 0; i < files.length; i++) attachedFiles.push(files[i]);
+        renderAttachedFiles();
+        this.value = '';
+      });
+    }
+    document.getElementById('api-chat-btn-attach').addEventListener('click', function() {
+      if (fileInput) fileInput.click();
+    });
+
+    document.getElementById('api-btn-chat-with-agent').addEventListener('click', openChatModal);
+    document.getElementById('api-chat-modal-close').addEventListener('click', closeChatModal);
+    document.getElementById('api-chat-overlay').addEventListener('click', function(e) {
+      if (e.target === this) closeChatModal();
+    });
+    document.getElementById('api-chat-send').addEventListener('click', sendMessage);
+    var inputEl = document.getElementById('api-chat-input');
+    inputEl.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+  </script>
+</body>
+</html>
