@@ -455,13 +455,18 @@
       desc: '<strong>ChromaDB vector store and embeddings.</strong> Text chunks are converted to vectors using an embedding model (e.g. Instructor or Sentence Transformer). These vectors are stored in ChromaDB with cosine similarity, along with the rich metadata. The vector index enables fast semantic search so that teacher queries can retrieve the most relevant chunks from the Geography curriculum.'
     },
     {
-      title: 'Step 3: Agent build',
-      image: 'screens/step3_agent_build.heic',
+      title: 'Step 3: Metadata review',
+      image: 'screens/agent4_metadata_review.heic',
+      desc: '<strong>Review NLP metadata for ingested chunks.</strong> After ingestion, you can review the metadata extracted for each chunk (e.g. subject, document type, keywords, summary, key facts). This helps verify that the content classifier and RAG pipeline are tagging curriculum content correctly before the agent uses it for retrieval.'
+    },
+    {
+      title: 'Step 4: Agent build',
+      image: 'screens/step5_agent_build.heic',
       desc: '<strong>Configure the Teaching Assistant agent.</strong> The agent is set up with a system prompt (Grade 10 Teaching Assistant role) and instructions: read the request, query the knowledge base via the RAG tool, then generate study notes, quizzes, activities, or homework. The agent uses a metadata-first flow: it receives a glimpse of top matching document metadata, then formulates 3–5 enriched queries to retrieve full chunks before generating the response.'
     },
     {
-      title: 'Step 4: Testing the agent',
-      image: 'screens/step4_testing_agent.heic',
+      title: 'Step 5: Testing the agent',
+      image: 'screens/step6_testing_agent.heic',
       desc: '<strong>End-to-end testing with sample queries.</strong> Teachers can ask natural-language questions such as “Build me a study note for Soil Resources” or “I want quizzes and activities for the Climate chapter.” The agent calls the RAG tool, retrieves curriculum-aligned content, and returns formatted study notes, quizzes, activities, and homework suggestions. This validates that the full pipeline—ingestion, retrieval, and generation—works as designed.'
     }
   ];
